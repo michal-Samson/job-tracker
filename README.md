@@ -30,7 +30,7 @@
 2. מורידים את העותק למחשב: `git clone https://github.com/<השם-שלכם>/job-tracker.git`
 3. פותחים ענף חדש לשינוי: `git checkout -b short-name-for-the-change`
 4. טוענים את התיקייה בכרום כמו בהתקנה למעלה, משנים את הקוד, ובודקים שהכול עובד. אחרי כל שינוי לוחצים על 🔄 ליד התוסף בעמוד `chrome://extensions`.
-5. שומרים ומעלים: `git commit -am "מה שיניתי"` ואז `git push -u origin short-name-for-the-change`
+5. שומרים ומעלים: `git add -A`, אחר כך `git commit -m "מה שיניתי"`, ואז `git push -u origin short-name-for-the-change`
 6. ב-GitHub יופיע כפתור **Compare & pull request**. לוחצים עליו, כותבים מה שיניתם ולמה, ושולחים.
 
 **כמה דברים על הקוד:**
