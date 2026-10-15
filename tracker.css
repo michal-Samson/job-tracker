@@ -138,3 +138,16 @@ td.actions { display: flex; gap: 4px; }
   text-decoration: none;
 }
 .steps { padding-inline-start: 20px; line-height: 1.8; }
+
+.next-step { font-size: 13px; }
+.next-step .next-text { color: var(--muted); white-space: normal; max-width: 180px; }
+.next-step.overdue { color: var(--danger); font-weight: 600; }
+.next-step.today { color: var(--warn); font-weight: 600; }
+.next-step.soon { color: var(--primary); }
+
+.history { list-style: none; padding: 0; margin: 0 0 10px; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; }
+
+#insightsDialog { width: min(680px, 95vw); }
+#insightsDialog h3 { font-size: 15px; margin: 16px 0 6px; }
+.insights-table { border: 1px solid var(--border); border-radius: 8px; }
+.insights-table th { position: static; }

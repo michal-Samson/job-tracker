@@ -17,6 +17,7 @@
         <summary>עוד ▾</summary>
         <div class="menu-items">
           <button id="importConnections">ייבוא קשרים מלינקדאין</button>
+          <button id="openInsights">סטטיסטיקות</button>
           <button id="editTemplate">תבנית הודעה לקשרים</button>
           <button id="backup">גיבוי נתונים</button>
           <button id="restore">שחזור מגיבוי</button>
@@ -30,7 +31,7 @@
   <section class="filters">
     <input id="search" type="search" placeholder="חיפוש לפי חברה, תפקיד, הערות...">
     <select id="statusFilter"></select>
-    <label class="check"><input id="followupOnly" type="checkbox"> רק משרות שדורשות פולואפ</label>
+    <label class="check"><input id="followupOnly" type="checkbox"> רק משרות שדורשות פעולה</label>
     <span id="connInfo" class="muted"></span>
   </section>
 
@@ -47,6 +48,7 @@
           <th data-sort="submitDate">הגשת קו"ח</th>
           <th data-sort="cvVersion">גרסת קו"ח</th>
           <th data-sort="status">סטטוס</th>
+          <th data-sort="nextDate">צעד הבא</th>
           <th>קשרים</th>
           <th>הערות</th>
           <th></th>
@@ -80,8 +82,13 @@
         <div class="field"><label>סטטוס</label><select name="status"></select></div>
         <div class="field"><label>גרסת קו"ח שנשלחה</label><input name="cvVersion"></div>
       </div>
+      <div class="row">
+        <div class="field"><label>תאריך הצעד הבא</label><input name="nextDate" type="date"></div>
+        <div class="field"><label>הצעד הבא</label><input name="nextStep" placeholder="ראיון / לחזור אליהם / לשלוח מבחן"></div>
+      </div>
       <div class="field"><label>איש קשר (שם / טלפון / מייל)</label><input name="contact"></div>
       <div class="field"><label>הערות</label><textarea name="notes" rows="3"></textarea></div>
+      <div id="jobHistory"></div>
       <div class="dialog-actions">
         <button type="submit" class="primary">שמירה</button>
         <button type="button" class="cancel">ביטול</button>
@@ -95,6 +102,15 @@
     <div id="connBody"></div>
     <div class="dialog-actions">
       <a id="connSearch" class="button-link" target="_blank">חיפוש בלינקדאין ↗</a>
+      <button type="button" class="cancel">סגירה</button>
+    </div>
+  </dialog>
+
+  <!-- Insights -->
+  <dialog id="insightsDialog">
+    <h2>סטטיסטיקות</h2>
+    <div id="insightsBody"></div>
+    <div class="dialog-actions">
       <button type="button" class="cancel">סגירה</button>
     </div>
   </dialog>

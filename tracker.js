@@ -39,6 +39,7 @@ function renderStats() {
     { lbl: 'בתהליך (שיחה/ראיון/מבחן)', num: jobs.filter(j => IN_PROCESS_STATUSES.includes(j.status)).length },
     { lbl: 'הצעות', num: jobs.filter(j => j.status === 'offer').length },
     { lbl: 'כדאי לשלוח פולואפ', num: jobs.filter(needsFollowup).length, warn: true },
+    { lbl: 'צעדים להיום', num: jobs.filter(j => ['overdue', 'today'].includes(nextStepState(j))).length, warn: true },
   ];
   $('#stats').innerHTML = stats.map(s =>
     `<div class="stat${s.warn && s.num ? ' warn' : ''}"><div class="num">${s.num}</div><div class="lbl">${s.lbl}</div></div>`
@@ -50,15 +51,19 @@ function visibleJobs() {
   const status = $('#statusFilter').value;
   const followupOnly = $('#followupOnly').checked;
   const statusOrder = id => STATUSES.findIndex(s => s.id === id);
+  // Jobs without a next step go last when sorting by it
+  const sortValue = j => sortKey === 'status' ? statusOrder(j.status)
+    : sortKey === 'nextDate' ? (j.nextDate || (sortDir === 1 ? '9999' : ''))
+    : (j[sortKey] || '');
 
   return jobs
     .filter(j => !status || j.status === status)
-    .filter(j => !followupOnly || needsFollowup(j))
+    .filter(j => !followupOnly || needsAction(j))
     .filter(j => !q || [j.company, j.role, j.notes, j.referrer, j.source, j.contact, j.cvVersion]
       .some(v => (v || '').toLowerCase().includes(q)))
     .sort((a, b) => {
-      const va = sortKey === 'status' ? statusOrder(a.status) : (a[sortKey] || '');
-      const vb = sortKey === 'status' ? statusOrder(b.status) : (b[sortKey] || '');
+      const va = sortValue(a);
+      const vb = sortValue(b);
       return (va > vb ? 1 : va < vb ? -1 : 0) * sortDir;
     });
 }
@@ -83,7 +88,7 @@ function rowHtml(j) {
   const followup = needsFollowup(j);
   const link = safeUrl(j.link);
   return `
-    <tr data-id="${j.id}" class="${followup ? 'followup' : ''}">
+    <tr data-id="${j.id}" class="${needsAction(j) ? 'followup' : ''}">
       <td>${formatDate(j.foundDate)}</td>
       <td><strong>${esc(j.company)}</strong></td>
       <td>${esc(j.role)}</td>
@@ -96,6 +101,7 @@ function rowHtml(j) {
         <select class="status-select" data-action="status" style="--c:${status.color}">${statusOptionsHtml(j.status)}</select>
         ${followup ? `<div class="followup-tag">⏰ ${daysSince(j.lastUpdate)} ימים בלי עדכון</div>` : ''}
       </td>
+      <td>${nextStepHtml(j)}</td>
       <td><button class="small" data-action="connections">${matches.length ? `👥 ${matches.length}` : '🔍 חיפוש'}</button></td>
       <td class="notes">${esc(j.notes)}</td>
       <td class="actions">
@@ -103,6 +109,16 @@ function rowHtml(j) {
         <button class="small danger" data-action="delete" title="מחיקה">🗑️</button>
       </td>
     </tr>`;
+}
+
+function nextStepHtml(j) {
+  if (!j.nextDate && !j.nextStep) return '';
+  const state = nextStepState(j);
+  const when = { overdue: '⚠️ עבר התאריך', today: '📌 היום', soon: '🔜 בקרוב' }[state];
+  return `<div class="next-step ${state}">
+    <div>${esc(formatDate(j.nextDate))}${when ? ` · ${when}` : ''}</div>
+    ${j.nextStep ? `<div class="next-text">${esc(j.nextStep)}</div>` : ''}
+  </div>`;
 }
 
 // ---------- table interactions ----------
@@ -147,7 +163,15 @@ function openJobDialog(job) {
   $('#jobDialogTitle').textContent = job ? 'עריכת משרה' : 'משרה חדשה';
   const values = job || { foundDate: today(), status: 'saved' };
   [...JOB_FIELDS, 'foundDate', 'status'].forEach(f => { form.elements[f].value = values[f] || ''; });
+  $('#jobHistory').innerHTML = job?.history?.length ? historyHtml(job.history) : '';
   $('#jobDialog').showModal();
+}
+
+function historyHtml(history) {
+  return '<label>היסטוריית סטטוסים</label><ol class="history">' + history.map(h => {
+    const s = statusById(h.status);
+    return `<li><span class="status-pill" style="background:${s.color}">${s.label}</span> ${esc(formatDate(h.date))}</li>`;
+  }).join('') + '</ol>';
 }
 
 $('#jobForm').elements.status.addEventListener('change', e => {
@@ -203,6 +227,59 @@ function openConnDialog(job) {
   $('#connDialog').showModal();
 }
 
+// ---------- insights dialog ----------
+$('#openInsights').addEventListener('click', () => {
+  closeMenu();
+  $('#insightsBody').innerHTML = insightsHtml();
+  $('#insightsDialog').showModal();
+});
+
+function percent(n, total) {
+  return total ? `${Math.round(n / total * 100)}%` : '–';
+}
+
+function insightsHtml() {
+  const submitted = jobs.filter(j => j.status !== 'saved' &&
+    (j.submitDate || reached(j, ['applied', 'review', ...ANSWER_STATUSES])));
+  if (!submitted.length) return '<p class="muted">עדיין אין משרות שהוגשו, אז אין מה לחשב.</p>';
+
+  const answered = submitted.filter(j => reached(j, ANSWER_STATUSES)).length;
+  const talked = submitted.filter(j => reached(j, CONVERSATION_STATUSES)).length;
+  const times = submitted.map(daysToResponse).filter(d => d !== null);
+  const avg = times.length ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : null;
+
+  const summary = [
+    { lbl: 'הוגשו', num: submitted.length },
+    { lbl: 'קיבלו תשובה', num: percent(answered, submitted.length) },
+    { lbl: 'הגיעו לשיחה או ראיון', num: percent(talked, submitted.length) },
+    { lbl: avg === null ? 'זמן ממוצע עד תשובה' : `זמן ממוצע עד תשובה (לפי ${times.length} משרות)`, num: avg === null ? '–' : `${avg} ימים` },
+  ];
+  return `<div class="stats">${summary.map(s =>
+    `<div class="stat"><div class="num">${s.num}</div><div class="lbl">${s.lbl}</div></div>`).join('')}</div>
+    ${breakdownHtml(submitted, 'source', 'מקור')}
+    ${breakdownHtml(submitted, 'cvVersion', 'גרסת קו"ח')}
+    <p class="muted">הזמן עד תשובה נמדד רק למשרות שהסטטוס שלהן השתנה מאז שנוספה היסטוריית הסטטוסים.</p>`;
+}
+
+function breakdownHtml(list, key, title) {
+  const groups = {};
+  list.forEach(j => {
+    const name = (j[key] || '').trim() || 'לא צוין';
+    (groups[name] ||= []).push(j);
+  });
+  const rows = Object.entries(groups)
+    .sort((a, b) => b[1].length - a[1].length)
+    .map(([name, group]) => {
+      const talked = group.filter(j => reached(j, CONVERSATION_STATUSES)).length;
+      return `<tr><td>${esc(name)}</td><td>${group.length}</td><td>${talked}</td><td>${percent(talked, group.length)}</td></tr>`;
+    }).join('');
+  return `<h3>לפי ${title}</h3>
+    <table class="insights-table">
+      <thead><tr><th>${title}</th><th>הוגשו</th><th>שיחה/ראיון</th><th>אחוז</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
 // ---------- template dialog ----------
 $('#editTemplate').addEventListener('click', () => {
   closeMenu();
@@ -241,6 +318,7 @@ $('#exportCsv').addEventListener('click', () => {
     ['foundDate', 'תאריך'], ['company', 'חברה'], ['role', 'תפקיד'], ['link', 'לינק'],
     ['source', 'מקור'], ['referrer', 'מי מעביר קו"ח'], ['submitDate', 'תאריך הגשה'],
     ['status', 'סטטוס'], ['cvVersion', 'גרסת קו"ח'], ['contact', 'איש קשר'],
+    ['nextDate', 'תאריך הצעד הבא'], ['nextStep', 'הצעד הבא'],
     ['lastUpdate', 'עדכון אחרון'], ['notes', 'הערות'],
   ];
   const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;

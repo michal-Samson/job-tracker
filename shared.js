@@ -14,6 +14,9 @@ const STATUSES = [
 ];
 const IN_PROCESS_STATUSES = ['phone', 'interview', 'assignment'];
 const WAITING_STATUSES = ['applied', 'review'];
+const CONVERSATION_STATUSES = ['phone', 'interview', 'assignment', 'offer'];
+const ANSWER_STATUSES = [...CONVERSATION_STATUSES, 'rejected'];
+const CLOSED_STATUSES = ['rejected', 'irrelevant'];
 const FOLLOWUP_DAYS = 7;
 
 const DEFAULT_TEMPLATE = `היי {שם},
@@ -22,7 +25,7 @@ const DEFAULT_TEMPLATE = `היי {שם},
 הלינק למשרה: {לינק}
 תודה רבה!`;
 
-const JOB_FIELDS = ['company', 'role', 'link', 'source', 'referrer', 'contact', 'cvVersion', 'submitDate', 'notes'];
+const JOB_FIELDS = ['company', 'role', 'link', 'source', 'referrer', 'contact', 'cvVersion', 'submitDate', 'nextDate', 'nextStep', 'notes'];
 
 const Store = {
   async get(key, fallback) {
@@ -38,6 +41,7 @@ const Store = {
     const jobs = await this.getJobs();
     const empty = Object.fromEntries(JOB_FIELDS.map(f => [f, '']));
     const full = { ...empty, status: 'saved', foundDate: today(), ...job, id: crypto.randomUUID(), lastUpdate: today() };
+    full.history = [{ status: full.status, date: today() }];
     jobs.unshift(full);
     await this.saveJobs(jobs);
     return full;
@@ -46,7 +50,11 @@ const Store = {
     const jobs = await this.getJobs();
     const i = jobs.findIndex(j => j.id === id);
     if (i < 0) return;
-    jobs[i] = { ...jobs[i], ...changes, lastUpdate: today() };
+    const job = jobs[i];
+    const history = changes.status && changes.status !== job.status
+      ? [...statusHistory(job), { status: changes.status, date: today() }]
+      : job.history;
+    jobs[i] = { ...job, ...changes, history, lastUpdate: today() };
     await this.saveJobs(jobs);
   },
   async deleteJob(id) {
@@ -62,6 +70,9 @@ const Store = {
 // ---------- dates ----------
 function today() {
   return new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD in local time
+}
+function daysBetween(from, to) {
+  return Math.round((new Date(to) - new Date(from)) / 86400000);
 }
 function daysSince(dateStr) {
   if (!dateStr) return Infinity;
@@ -84,6 +95,36 @@ function statusChanges(job, status) {
 }
 function wasSubmitted(job) {
   return job.status !== 'saved' && !!job.submitDate;
+}
+
+// ---------- status history ----------
+// Jobs saved before history existed get a single entry for their current status
+function statusHistory(job) {
+  return job.history?.length ? job.history : [{ status: job.status, date: job.lastUpdate || job.foundDate || '' }];
+}
+function reached(job, statuses) {
+  return statusHistory(job).some(h => statuses.includes(h.status));
+}
+// Days from submitting to the first answer (a call, interview etc. or a rejection); null if unknown
+function daysToResponse(job) {
+  if (!job.submitDate || !job.history) return null;
+  const first = job.history.find(h => ANSWER_STATUSES.includes(h.status));
+  if (!first) return null;
+  const days = daysBetween(job.submitDate, first.date);
+  return days >= 0 ? days : null;
+}
+
+// ---------- next step ----------
+function nextStepState(job) {
+  if (!job.nextDate || CLOSED_STATUSES.includes(job.status)) return '';
+  const days = daysSince(job.nextDate);
+  if (days > 0) return 'overdue';
+  if (days === 0) return 'today';
+  if (days >= -2) return 'soon';
+  return '';
+}
+function needsAction(job) {
+  return needsFollowup(job) || ['overdue', 'today'].includes(nextStepState(job));
 }
 
 // ---------- statuses ----------
