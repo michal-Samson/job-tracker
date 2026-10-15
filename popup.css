@@ -1,0 +1,17 @@
+body { width: 380px; background: var(--card); }
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+header h1 { font-size: 16px; }
+
+main { padding: 12px 14px 14px; }
+
+button.full { width: 100%; padding: 9px; }
+
+#connections a { margin-inline-start: 4px; }
+#connections ul { margin: 4px 0 0; padding-inline-start: 18px; }

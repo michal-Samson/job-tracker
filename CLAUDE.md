@@ -1,0 +1,33 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Overview
+
+A Chrome extension (Manifest V3) for tracking job applications, with a Hebrew, RTL UI. It's plain HTML/CSS/JS with no build step, package manager, bundler, linter or tests. All UI strings, status labels and the message template are in Hebrew. Keep new UI text in Hebrew and keep pages `dir="rtl"`.
+
+## Running
+
+- Load it in Chrome: open `chrome://extensions`, turn on Developer mode, click "Load unpacked" and choose this folder.
+- After changing code, click the reload (🔄) button on the extension's card at `chrome://extensions`, then reopen the popup or tracker tab.
+- Debugging: right-click the popup and choose Inspect. `tracker.html` opens as a normal tab, so use DevTools there.
+
+## Architecture
+
+There are two pages. Each loads `shared.js` with a plain `<script>` tag, followed by its own script. There are no modules: everything in `shared.js` is a global.
+
+- **`shared.js`**: the data layer and helpers that both pages use.
+  - `Store` wraps `chrome.storage.local` with three keys: `jobs` (array, newest first), `connections` (imported LinkedIn contacts) and `template` (the outreach message). All storage access is supposed to go through `Store`, so the backend can later be swapped for Google Sheets sync. Don't call `chrome.storage` directly from the pages.
+  - `STATUSES` is the ordered list of status ids, labels and colors. The order also controls status sorting in the table. `WAITING_STATUSES` and `FOLLOWUP_DAYS` drive the follow-up highlight (`needsFollowup`). `IN_PROCESS_STATUSES` feeds the stats.
+  - `statusChanges()` encodes two rules: moving to `applied` sets `submitDate` to today if it is empty, and moving back to `saved` clears `submitDate`. The popup form and the tracker's edit dialog repeat both rules in their status `change` handlers. The "submitted in the last 7 days" stat counts only jobs where `wasSubmitted()` is true.
+  - Page parsing: `cleanUrl` normalizes LinkedIn job URLs and strips tracking params, which is what duplicate detection relies on (it compares `link`). `guessFromTitle` pulls the company and role out of the tab title. `detectSource` maps a hostname to a source name.
+  - LinkedIn: `parseLinkedInConnections` reads LinkedIn's exported `Connections.csv`, skipping the "Notes" lines above the header. `findConnections` does fuzzy company matching through `normalizeCompany`.
+  - `esc()` must wrap any user or imported data that is interpolated into `innerHTML`. Rendering is done with template strings throughout.
+- **`popup.html` / `popup.js`**: the toolbar action. Prefills a new job from the active tab (needs the `activeTab` permission), warns if the link is already saved, and shows matching connections.
+- **`tracker.html` / `tracker.js`**: the full table, also registered as the `options_page`. It handles filtering and sorting, inline status changes, add/edit dialogs, the connections dialog with the copy-message template (placeholders `{שם}`, `{חברה}`, `{תפקיד}`, `{לינק}`), LinkedIn CSV import, CSV export (with a BOM so Excel reads the Hebrew) and JSON backup/restore (`{ version: 1, jobs, template }`). It re-renders on `chrome.storage.onChanged`, so changes made in the popup show up live.
+- CSS: `style.css` holds the shared base styles. `popup.css` and `tracker.css` hold page-specific styles.
+
+## Data notes
+
+- A job's fields are `JOB_FIELDS` plus `id` (from `crypto.randomUUID`), `status`, `foundDate` and `lastUpdate`. Dates are stored as `YYYY-MM-DD` local strings (`today()`) and shown as `DD/MM/YYYY` (`formatDate`). If you add a job field, add it to `JOB_FIELDS` and also to the CSV export columns in `tracker.js`.
+- Data exists only in the user's local browser storage, and removing the extension deletes it. Don't change storage keys or the job shape in a way that breaks existing data or old backup files.

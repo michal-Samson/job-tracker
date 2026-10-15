@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <title>הוספת משרה</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1>💼 הוספת משרה</h1>
+    <button id="openTracker" class="small">לטבלה המלאה ←</button>
+  </header>
+
+  <main>
+    <div id="existing" class="notice warn" hidden></div>
+
+    <form id="jobForm">
+      <div class="row">
+        <div class="field">
+          <label for="company">חברה</label>
+          <input id="company" required>
+        </div>
+        <div class="field">
+          <label for="role">תפקיד</label>
+          <input id="role">
+        </div>
+      </div>
+
+      <div id="connections" class="notice info" hidden></div>
+
+      <div class="field">
+        <label for="link">לינק למשרה</label>
+        <input id="link" type="url" dir="ltr">
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="source">מקור</label>
+          <input id="source">
+        </div>
+        <div class="field">
+          <label for="referrer">מי מעביר את קו"ח</label>
+          <input id="referrer" placeholder="הגשה ישירה / שם">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="status">סטטוס</label>
+          <select id="status"></select>
+        </div>
+        <div class="field">
+          <label for="submitDate">תאריך הגשת קו"ח</label>
+          <input id="submitDate" type="date">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="cvVersion">גרסת קו"ח שנשלחה</label>
+        <input id="cvVersion">
+      </div>
+
+      <div class="field">
+        <label for="notes">הערות</label>
+        <textarea id="notes" rows="2"></textarea>
+      </div>
+
+      <button type="submit" class="primary full">שמירה</button>
+    </form>
+
+    <div id="saved" class="notice success" hidden>✓ המשרה נשמרה!</div>
+  </main>
+
+  <script src="shared.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

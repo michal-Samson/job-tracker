@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>מעקב חיפוש עבודה</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="tracker.css">
+</head>
+<body>
+  <header class="top">
+    <h1> מעקב חיפוש עבודה</h1>
+    <div class="top-actions">
+      <button id="addJob" class="primary">+ משרה חדשה</button>
+      <button id="exportCsv">ייצוא לאקסל</button>
+      <details class="menu">
+        <summary>עוד ▾</summary>
+        <div class="menu-items">
+          <button id="importConnections">ייבוא קשרים מלינקדאין</button>
+          <button id="editTemplate">תבנית הודעה לקשרים</button>
+          <button id="backup">גיבוי נתונים</button>
+          <button id="restore">שחזור מגיבוי</button>
+        </div>
+      </details>
+    </div>
+  </header>
+
+  <section id="stats" class="stats"></section>
+
+  <section class="filters">
+    <input id="search" type="search" placeholder="חיפוש לפי חברה, תפקיד, הערות...">
+    <select id="statusFilter"></select>
+    <label class="check"><input id="followupOnly" type="checkbox"> רק משרות שדורשות פולואפ</label>
+    <span id="connInfo" class="muted"></span>
+  </section>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th data-sort="foundDate">תאריך</th>
+          <th data-sort="company">חברה</th>
+          <th data-sort="role">תפקיד</th>
+          <th>לינק</th>
+          <th data-sort="source">מקור</th>
+          <th data-sort="referrer">מי מעביר קו"ח</th>
+          <th data-sort="submitDate">הגשת קו"ח</th>
+          <th data-sort="cvVersion">גרסת קו"ח</th>
+          <th data-sort="status">סטטוס</th>
+          <th>קשרים</th>
+          <th>הערות</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="empty" class="empty" hidden>
+      אין עדיין משרות. היכנסי לדף משרה ולחצי על אייקון התוסף, או על "+ משרה חדשה".
+    </div>
+  </div>
+
+  <!-- Add / edit job -->
+  <dialog id="jobDialog">
+    <form id="jobForm" method="dialog">
+      <h2 id="jobDialogTitle">משרה חדשה</h2>
+      <div class="row">
+        <div class="field"><label>חברה</label><input name="company" required></div>
+        <div class="field"><label>תפקיד</label><input name="role"></div>
+      </div>
+      <div class="field"><label>לינק למשרה</label><input name="link" type="url" dir="ltr"></div>
+      <div class="row">
+        <div class="field"><label>תאריך</label><input name="foundDate" type="date"></div>
+        <div class="field"><label>מקור</label><input name="source"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>מי מעביר את קו"ח</label><input name="referrer"></div>
+        <div class="field"><label>תאריך הגשת קו"ח</label><input name="submitDate" type="date"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>סטטוס</label><select name="status"></select></div>
+        <div class="field"><label>גרסת קו"ח שנשלחה</label><input name="cvVersion"></div>
+      </div>
+      <div class="field"><label>איש קשר (שם / טלפון / מייל)</label><input name="contact"></div>
+      <div class="field"><label>הערות</label><textarea name="notes" rows="3"></textarea></div>
+      <div class="dialog-actions">
+        <button type="submit" class="primary">שמירה</button>
+        <button type="button" class="cancel">ביטול</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Connections at a company -->
+  <dialog id="connDialog">
+    <h2 id="connTitle"></h2>
+    <div id="connBody"></div>
+    <div class="dialog-actions">
+      <a id="connSearch" class="button-link" target="_blank">חיפוש בלינקדאין ↗</a>
+      <button type="button" class="cancel">סגירה</button>
+    </div>
+  </dialog>
+
+  <!-- Message template -->
+  <dialog id="templateDialog">
+    <form id="templateForm" method="dialog">
+      <h2>תבנית הודעה לקשרים</h2>
+      <p class="muted">אפשר להשתמש ב: {שם} {חברה} {תפקיד} {לינק}. הם יתמלאו אוטומטית.</p>
+      <textarea id="templateText" rows="8"></textarea>
+      <div class="dialog-actions">
+        <button type="submit" class="primary">שמירה</button>
+        <button type="button" id="resetTemplate">החזרה לברירת מחדל</button>
+        <button type="button" class="cancel">ביטול</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Import help -->
+  <dialog id="importDialog">
+    <h2>ייבוא קשרים מלינקדאין</h2>
+    <ol class="steps">
+      <li>בלינקדאין: <b>Me ← Settings & Privacy ← Data privacy ← Get a copy of your data</b></li>
+      <li>בחרי רק <b>Connections</b> ולחצי Request archive</li>
+      <li>תוך כמה דקות יגיע אלייך מייל עם קובץ להורדה</li>
+      <li>פתחי את הקובץ (ZIP) ובחרי כאן את <b>Connections.csv</b></li>
+    </ol>
+    <p class="muted">הקובץ נשמר רק אצלך בדפדפן. כדאי לייבא מחדש מדי פעם כדי לעדכן.</p>
+    <div class="dialog-actions">
+      <button type="button" id="chooseConnFile" class="primary">בחירת קובץ</button>
+      <button type="button" class="cancel">ביטול</button>
+    </div>
+  </dialog>
+
+  <input id="connFile" type="file" accept=".csv" hidden>
+  <input id="restoreFile" type="file" accept=".json" hidden>
+
+  <script src="shared.js"></script>
+  <script src="tracker.js"></script>
+</body>
+</html>
