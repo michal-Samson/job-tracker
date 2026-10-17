@@ -6,6 +6,7 @@ let template = '';
 let sortKey = 'foundDate';
 let sortDir = -1;
 let editingId = null;
+let editingHistory = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   $('#statusFilter').innerHTML = '<option value="">כל הסטטוסים</option>' + statusOptionsHtml('');
@@ -34,15 +35,15 @@ function render() {
 
 function renderStats() {
   const stats = [
-    { lbl: 'סה"כ משרות', num: jobs.length },
-    { lbl: 'הוגשו ב-7 הימים האחרונים', num: jobs.filter(j => wasSubmitted(j) && daysSince(j.submitDate) < 7).length },
-    { lbl: 'בתהליך (שיחה/ראיון/מבחן)', num: jobs.filter(j => IN_PROCESS_STATUSES.includes(j.status)).length },
-    { lbl: 'הצעות', num: jobs.filter(j => j.status === 'offer').length },
-    { lbl: 'כדאי לשלוח פולואפ', num: jobs.filter(needsFollowup).length, warn: true },
-    { lbl: 'צעדים להיום', num: jobs.filter(j => ['overdue', 'today'].includes(nextStepState(j))).length, warn: true },
+    { icon: '💼', lbl: 'סה"כ משרות', num: jobs.length },
+    { icon: '📤', lbl: 'הוגשו ב-7 הימים האחרונים', num: jobs.filter(j => wasSubmitted(j) && daysSince(j.submitDate) < 7).length },
+    { icon: '💬', lbl: 'בתהליך (שיחה/ראיון/מבחן)', num: jobs.filter(j => IN_PROCESS_STATUSES.includes(j.status)).length },
+    { icon: '🎉', lbl: 'הצעות', num: jobs.filter(j => j.status === 'offer').length },
+    { icon: '⏰', lbl: 'כדאי לשלוח פולואפ', num: jobs.filter(needsFollowup).length, warn: true },
+    { icon: '📌', lbl: 'צעדים להיום', num: jobs.filter(j => ['overdue', 'today'].includes(nextStepState(j))).length, warn: true },
   ];
   $('#stats').innerHTML = stats.map(s =>
-    `<div class="stat${s.warn && s.num ? ' warn' : ''}"><div class="num">${s.num}</div><div class="lbl">${s.lbl}</div></div>`
+    `<div class="stat${s.warn && s.num ? ' warn' : ''}"><div class="icon">${s.icon}</div><div><div class="num">${s.num}</div><div class="lbl">${s.lbl}</div></div></div>`
   ).join('');
 }
 
@@ -74,7 +75,7 @@ function renderTable() {
   $('#empty').hidden = list.length > 0;
   $('#empty').textContent = jobs.length
     ? 'אין משרות שמתאימות לסינון.'
-    : 'אין עדיין משרות. היכנסי לדף משרה ולחצי על אייקון התוסף, או על "+ משרה חדשה".';
+    : 'אין עדיין משרות. נכנסים לדף של משרה ולוחצים על אייקון התוסף, או על "+ משרה חדשה".';
 
   document.querySelectorAll('th[data-sort]').forEach(th => {
     th.classList.toggle('sorted', th.dataset.sort === sortKey);
@@ -89,34 +90,37 @@ function rowHtml(j) {
   const link = safeUrl(j.link);
   return `
     <tr data-id="${j.id}" class="${needsAction(j) ? 'followup' : ''}">
-      <td>${formatDate(j.foundDate)}</td>
-      <td><strong>${esc(j.company)}</strong></td>
-      <td>${esc(j.role)}</td>
-      <td>${link ? `<a href="${esc(link)}" target="_blank">פתיחה ↗</a>` : ''}</td>
-      <td>${esc(j.source)}</td>
-      <td>${esc(j.referrer)}</td>
-      <td>${formatDate(j.submitDate)}</td>
-      <td>${esc(j.cvVersion)}</td>
+      <td class="date">${formatDate(j.foundDate)}</td>
+      <td>
+        <div class="company">
+          <span class="avatar" style="--h:${companyHue(j.company)}">${esc([...(j.company || '?').trim()][0] || '?')}</span>
+          <strong>${link ? `<a href="${esc(link)}" target="_blank" title="פתיחת המשרה">${esc(j.company)} ↗</a>` : esc(j.company)}</strong>
+          ${j.notes ? `<span class="has-notes" title="${esc(j.notes)}">📝</span>` : ''}
+        </div>
+      </td>
+      <td class="role">${esc(j.role)}</td>
       <td>
         <select class="status-select" data-action="status" style="--c:${status.color}">${statusOptionsHtml(j.status)}</select>
         ${followup ? `<div class="followup-tag">⏰ ${daysSince(j.lastUpdate)} ימים בלי עדכון</div>` : ''}
       </td>
       <td>${nextStepHtml(j)}</td>
-      <td><button class="small" data-action="connections">${matches.length ? `👥 ${matches.length}` : '🔍 חיפוש'}</button></td>
-      <td class="notes">${esc(j.notes)}</td>
-      <td class="actions">
-        <button class="small" data-action="edit" title="עריכה">✏️</button>
-        <button class="small danger" data-action="delete" title="מחיקה">🗑️</button>
-      </td>
+      <td><button class="small conn-btn${matches.length ? ' has' : ''}" data-action="connections">${matches.length ? `👥 ${matches.length}` : '🔍 חיפוש'}</button></td>
     </tr>`;
+}
+
+// A stable color per company, so the same company always gets the same avatar
+function companyHue(name = '') {
+  let hash = 0;
+  for (const ch of name.trim().toLowerCase()) hash = (hash * 31 + ch.codePointAt(0)) % 360;
+  return hash;
 }
 
 function nextStepHtml(j) {
   if (!j.nextDate && !j.nextStep) return '';
   const state = nextStepState(j);
-  const when = { overdue: '⚠️ עבר התאריך', today: '📌 היום', soon: '🔜 בקרוב' }[state];
+  const when = { overdue: 'עבר התאריך', today: 'היום', soon: 'בקרוב' }[state];
   return `<div class="next-step ${state}">
-    <div>${esc(formatDate(j.nextDate))}${when ? ` · ${when}` : ''}</div>
+    ${j.nextDate ? `<span class="next-chip">📅 ${esc(formatDate(j.nextDate))}${when ? ` · ${when}` : ''}</span>` : ''}
     ${j.nextStep ? `<div class="next-text">${esc(j.nextStep)}</div>` : ''}
   </div>`;
 }
@@ -140,17 +144,13 @@ $('#tbody').addEventListener('change', async e => {
   await Store.updateJob(job.id, statusChanges(job, e.target.value));
 });
 
-$('#tbody').addEventListener('click', async e => {
-  const action = e.target.closest('button')?.dataset.action;
-  if (!action) return;
-  const job = jobs.find(j => j.id === e.target.closest('tr').dataset.id);
-
-  if (action === 'edit') openJobDialog(job);
-  if (action === 'connections') openConnDialog(job);
-  if (action === 'delete' && confirm(`למחוק את המשרה ב-${job.company}?`)) {
-    await Store.deleteJob(job.id);
-    toast('המשרה נמחקה');
-  }
+// Clicking a row opens the job, except on its own controls (status, link, connections)
+$('#tbody').addEventListener('click', e => {
+  const row = e.target.closest('tr');
+  if (!row || e.target.closest('a, select')) return;
+  const job = jobs.find(j => j.id === row.dataset.id);
+  if (e.target.closest('button')?.dataset.action === 'connections') openConnDialog(job);
+  else openJobDialog(job);
 });
 
 // ---------- add / edit dialog ----------
@@ -160,19 +160,36 @@ function openJobDialog(job) {
   editingId = job?.id || null;
   const form = $('#jobForm');
   form.reset();
-  $('#jobDialogTitle').textContent = job ? 'עריכת משרה' : 'משרה חדשה';
+  $('#jobDialogTitle').textContent = job ? [job.company, job.role].filter(Boolean).join(' · ') : 'משרה חדשה';
+  $('#deleteJob').hidden = !job;
   const values = job || { foundDate: today(), status: 'saved' };
   [...JOB_FIELDS, 'foundDate', 'status'].forEach(f => { form.elements[f].value = values[f] || ''; });
-  $('#jobHistory').innerHTML = job?.history?.length ? historyHtml(job.history) : '';
+  editingHistory = job?.history?.length ? [...job.history] : null;
+  renderHistory();
   $('#jobDialog').showModal();
 }
 
-function historyHtml(history) {
-  return '<label>היסטוריית סטטוסים</label><ol class="history">' + history.map(h => {
-    const s = statusById(h.status);
-    return `<li><span class="status-pill" style="background:${s.color}">${s.label}</span> ${esc(formatDate(h.date))}</li>`;
-  }).join('') + '</ol>';
+// The last entry is the current status, so it can't be removed
+function renderHistory() {
+  const history = editingHistory || [];
+  $('#jobHistory').innerHTML = !history.length ? '' :
+    '<label>היסטוריית סטטוסים</label><ol class="history">' + history.map((h, i) => {
+      const s = statusById(h.status);
+      const remove = i < history.length - 1
+        ? `<button type="button" class="remove-history" data-index="${i}" title="מחיקה מההיסטוריה">✕</button>` : '';
+      return `<li><span class="status-pill" style="--c:${s.color}">${s.label}</span> ${esc(formatDate(h.date))}${remove}</li>`;
+    }).join('') + '</ol>';
 }
+
+// Removing an entry takes effect only when the form is saved
+$('#jobHistory').addEventListener('click', e => {
+  const index = e.target.closest('[data-index]')?.dataset.index;
+  if (index === undefined) return;
+  editingHistory.splice(Number(index), 1);
+  // Two of the same status in a row would read as a duplicate, so keep only the first
+  editingHistory = editingHistory.filter((h, i, list) => i === 0 || h.status !== list[i - 1].status);
+  renderHistory();
+});
 
 $('#jobForm').elements.status.addEventListener('change', e => {
   const form = $('#jobForm');
@@ -185,12 +202,21 @@ $('#jobForm').addEventListener('submit', async () => {
   const data = Object.fromEntries([...JOB_FIELDS, 'foundDate', 'status'].map(f => [f, form.elements[f].value.trim()]));
   data.link = data.link ? cleanUrl(data.link) : '';
   if (editingId) {
+    if (editingHistory) data.history = editingHistory;
     await Store.updateJob(editingId, data);
     toast('השינויים נשמרו');
   } else {
     await Store.addJob(data);
     toast('המשרה נוספה');
   }
+});
+
+$('#deleteJob').addEventListener('click', async () => {
+  const job = jobs.find(j => j.id === editingId);
+  if (!job || !confirm(`למחוק את המשרה ב-${job.company}?`)) return;
+  $('#jobDialog').close();
+  await Store.deleteJob(job.id);
+  toast('המשרה נמחקה');
 });
 
 // ---------- connections dialog ----------

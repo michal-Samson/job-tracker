@@ -9,7 +9,13 @@
 </head>
 <body>
   <header class="top">
-    <h1> מעקב חיפוש עבודה</h1>
+    <div class="brand">
+      <img src="icons/icon48.png" alt="">
+      <div>
+        <h1>מעקב חיפוש עבודה</h1>
+        <div class="tagline">כל המשרות, הסטטוסים והקשרים במקום אחד</div>
+      </div>
+    </div>
     <div class="top-actions">
       <button id="addJob" class="primary">+ משרה חדשה</button>
       <button id="exportCsv">ייצוא לאקסל</button>
@@ -42,22 +48,15 @@
           <th data-sort="foundDate">תאריך</th>
           <th data-sort="company">חברה</th>
           <th data-sort="role">תפקיד</th>
-          <th>לינק</th>
-          <th data-sort="source">מקור</th>
-          <th data-sort="referrer">מי מעביר קו"ח</th>
-          <th data-sort="submitDate">הגשת קו"ח</th>
-          <th data-sort="cvVersion">גרסת קו"ח</th>
           <th data-sort="status">סטטוס</th>
           <th data-sort="nextDate">צעד הבא</th>
           <th>קשרים</th>
-          <th>הערות</th>
-          <th></th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
     </table>
     <div id="empty" class="empty" hidden>
-      אין עדיין משרות. היכנסי לדף משרה ולחצי על אייקון התוסף, או על "+ משרה חדשה".
+      אין עדיין משרות. נכנסים לדף של משרה ולוחצים על אייקון התוסף, או על "+ משרה חדשה".
     </div>
   </div>
 
@@ -92,6 +91,7 @@
       <div class="dialog-actions">
         <button type="submit" class="primary">שמירה</button>
         <button type="button" class="cancel">ביטול</button>
+        <button type="button" id="deleteJob" class="danger push-end">🗑️ מחיקת המשרה</button>
       </div>
     </form>
   </dialog>
@@ -133,10 +133,10 @@
   <dialog id="importDialog">
     <h2>ייבוא קשרים מלינקדאין</h2>
     <ol class="steps">
-      <li>בלינקדאין: <b>Me ← Settings & Privacy ← Data privacy ← Get a copy of your data</b></li>
-      <li>בחרי רק <b>Connections</b> ולחצי Request archive</li>
-      <li>תוך כמה דקות יגיע אלייך מייל עם קובץ להורדה</li>
-      <li>פתחי את הקובץ (ZIP) ובחרי כאן את <b>Connections.csv</b></li>
+      <li>פותחים את <a href="https://www.linkedin.com/mypreferences/d/download-my-data" target="_blank">עמוד הורדת הנתונים בלינקדאין ↗</a></li>
+      <li>מסמנים רק את <b>Connections</b> (קשרים) ולוחצים על הכפתור שמבקש את הקובץ</li>
+      <li>תוך כמה דקות יגיע מייל עם קובץ להורדה</li>
+      <li>פותחים את הקובץ (ZIP) ובוחרים כאן את <b>Connections.csv</b></li>
     </ol>
     <p class="muted">הקובץ נשמר רק אצלך בדפדפן. כדאי לייבא מחדש מדי פעם כדי לעדכן.</p>
     <div class="dialog-actions">

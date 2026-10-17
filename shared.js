@@ -17,6 +17,7 @@ const WAITING_STATUSES = ['applied', 'review'];
 const CONVERSATION_STATUSES = ['phone', 'interview', 'assignment', 'offer'];
 const ANSWER_STATUSES = [...CONVERSATION_STATUSES, 'rejected'];
 const CLOSED_STATUSES = ['rejected', 'irrelevant'];
+const REPEATABLE_STATUSES = ['phone', 'interview', 'assignment'];
 const FOLLOWUP_DAYS = 7;
 
 const DEFAULT_TEMPLATE = `היי {שם},
@@ -50,9 +51,10 @@ const Store = {
     const jobs = await this.getJobs();
     const i = jobs.findIndex(j => j.id === id);
     if (i < 0) return;
-    const job = jobs[i];
+    // An edited history (entries removed by hand) replaces the stored one
+    const job = changes.history ? { ...jobs[i], history: changes.history } : jobs[i];
     const history = changes.status && changes.status !== job.status
-      ? [...statusHistory(job), { status: changes.status, date: today() }]
+      ? historyWithStatus(job, changes.status)
       : job.history;
     jobs[i] = { ...job, ...changes, history, lastUpdate: today() };
     await this.saveJobs(jobs);
@@ -101,6 +103,14 @@ function wasSubmitted(job) {
 // Jobs saved before history existed get a single entry for their current status
 function statusHistory(job) {
   return job.history?.length ? job.history : [{ status: job.status, date: job.lastUpdate || job.foundDate || '' }];
+}
+// Going back to a one-time status (anything but a call, interview or test) means
+// the later changes were a mistake, so they are removed instead of adding a repeat
+function historyWithStatus(job, status) {
+  const history = statusHistory(job);
+  const earlier = history.findIndex(h => h.status === status);
+  if (earlier >= 0 && !REPEATABLE_STATUSES.includes(status)) return history.slice(0, earlier + 1);
+  return [...history, { status, date: today() }];
 }
 function reached(job, statuses) {
   return statusHistory(job).some(h => statuses.includes(h.status));

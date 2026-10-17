@@ -4,14 +4,21 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
+  background: var(--accent);
+  color: #fff;
 }
-header h1 { font-size: 16px; }
+header h1 { font-size: 16px; font-weight: 600; }
+header button.small {
+  background: rgba(255, 255, 255, .18);
+  border-color: rgba(255, 255, 255, .3);
+  color: #fff;
+}
+header button.small:hover { background: rgba(255, 255, 255, .28); }
 
-main { padding: 12px 14px 14px; }
+main { padding: 14px 16px 16px; }
 
-button.full { width: 100%; padding: 9px; }
+button.full { width: 100%; padding: 10px; }
 
 #connections a { margin-inline-start: 4px; }
 #connections ul { margin: 4px 0 0; padding-inline-start: 18px; }
