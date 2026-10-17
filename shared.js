@@ -143,7 +143,7 @@ function statusById(id) {
 }
 function statusOptionsHtml(selected) {
   return STATUSES.map(s =>
-    `<option value="${s.id}"${s.id === selected ? ' selected' : ''}>${s.label}</option>`).join('');
+    `<option value="${s.id}" class="status-option" style="--c:${s.color}"${s.id === selected ? ' selected' : ''}>${s.label}</option>`).join('');
 }
 
 // ---------- URLs and page info ----------

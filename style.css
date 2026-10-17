@@ -64,6 +64,43 @@ input:focus, select:focus, textarea:focus {
 }
 textarea { resize: vertical; }
 
+/* Chrome's customizable select: the open list looks like the app's menus */
+select, ::picker(select) { appearance: base-select; }
+select { display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; }
+select::picker-icon { color: var(--muted); transition: rotate .2s; }
+select:open::picker-icon { rotate: 180deg; }
+::picker(select) {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px;
+  margin-block: 6px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(30, 27, 58, .14);
+}
+option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+}
+option:hover, option:focus-visible { background: var(--primary-soft); color: var(--primary); outline: none; }
+option:checked { font-weight: 600; }
+option::checkmark { color: var(--primary); }
+/* Each status gets a dot in its own color */
+option.status-option::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--c);
+}
+
 button {
   font: inherit;
   font-weight: 500;

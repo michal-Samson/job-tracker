@@ -159,7 +159,7 @@ td.role { color: #3f3d5a; }
   cursor: pointer;
 }
 .status-select:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 25%, transparent); }
-.status-select option { color: var(--text); background: #fff; }
+.status-select::picker-icon { color: var(--c); }
 .followup-tag { color: var(--warn); font-size: 12px; margin-top: 5px; }
 
 .next-step { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
