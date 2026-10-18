@@ -3,7 +3,7 @@
   "name": "מעקב חיפוש עבודה",
   "version": "1.0.0",
   "description": "תיעוד משרות שהגשתי, סטטוסים, וקשרים בלינקדאין בחברות",
-  "permissions": ["storage", "activeTab", "alarms"],
+  "permissions": ["storage", "activeTab", "alarms", "scripting"],
   "background": {
     "service_worker": "background.js"
   },

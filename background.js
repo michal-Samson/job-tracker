@@ -8,13 +8,21 @@ async function updateBadge() {
   await chrome.action.setBadgeText({ text: count ? String(count) : '' });
 }
 
-// Dates move on even when nothing changes, so recount every hour
+// Dates have no time of day, so the count only changes when a new day starts:
+// recount just after midnight. The alarm is set again each time, since days aren't
+// always 24 hours long (daylight saving time).
+function scheduleMidnight() {
+  const next = new Date();
+  next.setHours(24, 1, 0, 0);
+  chrome.alarms.create('badge', { when: next.getTime() });
+}
+
 function start() {
-  chrome.alarms.create('badge', { periodInMinutes: 60 });
+  scheduleMidnight();
   updateBadge();
 }
 
 chrome.runtime.onInstalled.addListener(start);
 chrome.runtime.onStartup.addListener(start);
-chrome.alarms.onAlarm.addListener(updateBadge);
+chrome.alarms.onAlarm.addListener(start);
 chrome.storage.onChanged.addListener(changes => { if (changes.jobs) updateBadge(); });

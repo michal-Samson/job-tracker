@@ -179,26 +179,35 @@ function cleanUrl(url) {
     return url;
   }
 }
-function detectSource(url) {
+// Known job sites get a fixed name; any other site uses the name it gives itself, then its address
+function detectSource(url, siteName = '') {
   const sources = {
     'linkedin.': 'לינקדאין', 'alljobs.': 'AllJobs', 'drushim.': 'דרושים', 'jobmaster.': 'JobMaster',
     'gotfriends.': 'GotFriends', 'indeed.': 'Indeed', 'glassdoor.': 'Glassdoor', 'facebook.': 'פייסבוק',
-    'comeet.': 'Comeet', 'greenhouse.': 'Greenhouse', 'lever.co': 'Lever',
+    'comeet.': 'Comeet', 'greenhouse.': 'Greenhouse', 'lever.co': 'Lever', 'jobify': 'Jobify',
   };
   try {
     const host = new URL(url).hostname.replace(/^www\./, '');
     const match = Object.keys(sources).find(k => host.includes(k));
-    return match ? sources[match] : host;
+    return match ? sources[match] : (siteName.trim() || host);
   } catch {
     return '';
   }
 }
-function guessFromTitle(title = '') {
-  title = title.replace(/^\(\d+\)\s*/, '');
+// Fallback when the page has no structured job data. Only short parts that look like
+// a site name are dropped, so "Jobify - משרות דרושים <role>" keeps the role.
+function guessFromTitle(title = '', siteName = '') {
+  title = title.replace(/^\(\d+\)\s*/, '').trim();
   const hiring = title.match(/^(.+?) hiring (.+?)(?: in .+?)?\s*\|/i);
   if (hiring) return { company: hiring[1].trim(), role: hiring[2].trim() };
-  const sites = /linkedin|alljobs|drushim|דרושים|jobmaster|indeed|glassdoor|comeet|greenhouse|lever/i;
-  const parts = title.split(/\s+[|–—-]\s+/).map(s => s.trim()).filter(p => p && !sites.test(p));
+  const application = title.match(/^Job Application for (.+?) at (.+)$/i);
+  if (application) return { role: application[1].trim(), company: application[2].trim() };
+  const sites = /linkedin|alljobs|drushim|דרושים|jobmaster|indeed|glassdoor|comeet|greenhouse|lever|jobify/i;
+  const isSiteName = p => p.toLowerCase() === siteName.trim().toLowerCase() ||
+    (sites.test(p) && p.split(/\s+/).length <= 3);
+  const parts = title.split(/\s+[|–—-]\s+/)
+    .map(p => p.replace(/^((משרות|משרת|משרה|דרושים|דרוש|דרושה)\s+)+/, '').trim())
+    .filter(p => p && !isSiteName(p));
   return { role: parts[0] || '', company: parts[1] || '' };
 }
 function linkedinSearchUrl(company) {
