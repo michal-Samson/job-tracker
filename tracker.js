@@ -38,7 +38,7 @@ function renderStats() {
     { icon: '💼', lbl: 'סה"כ משרות', num: jobs.length },
     { icon: '📤', lbl: 'הוגשו ב-7 הימים האחרונים', num: jobs.filter(j => wasSubmitted(j) && daysSince(j.submitDate) < 7).length },
     { icon: '💬', lbl: 'בתהליך (שיחה/ראיון/מבחן)', num: jobs.filter(j => IN_PROCESS_STATUSES.includes(j.status)).length },
-    { icon: '🎉', lbl: 'הצעות', num: jobs.filter(j => j.status === 'offer').length },
+    { icon: '🎉', lbl: 'הצעות עבודה', num: jobs.filter(j => j.status === 'offer').length },
     { icon: '⏰', lbl: 'כדאי לשלוח פולואפ', num: jobs.filter(needsFollowup).length, warn: true },
     { icon: '📌', lbl: 'צעדים להיום', num: jobs.filter(j => ['overdue', 'today'].includes(nextStepState(j))).length, warn: true },
   ];
@@ -120,7 +120,10 @@ function nextStepHtml(j) {
   const state = nextStepState(j);
   const when = { overdue: 'עבר התאריך', today: 'היום', soon: 'בקרוב' }[state];
   return `<div class="next-step ${state}">
-    ${j.nextDate ? `<span class="next-chip">📅 ${esc(formatDate(j.nextDate))}${when ? ` · ${when}` : ''}</span>` : ''}
+    <div class="next-top">
+      ${j.nextDate ? `<span class="next-chip">📅 ${esc(formatDate(j.nextDate))}${when ? ` · ${when}` : ''}</span>` : ''}
+      <button class="step-done" data-action="step-done" title="סימון שבוצע">✓</button>
+    </div>
     ${j.nextStep ? `<div class="next-text">${esc(j.nextStep)}</div>` : ''}
   </div>`;
 }
@@ -144,13 +147,17 @@ $('#tbody').addEventListener('change', async e => {
   await Store.updateJob(job.id, statusChanges(job, e.target.value));
 });
 
-// Clicking a row opens the job, except on its own controls (status, link, connections)
-$('#tbody').addEventListener('click', e => {
+// Clicking a row opens the job, except on its own controls (status, link, step done, connections)
+$('#tbody').addEventListener('click', async e => {
   const row = e.target.closest('tr');
   if (!row || e.target.closest('a, select')) return;
   const job = jobs.find(j => j.id === row.dataset.id);
-  if (e.target.closest('button')?.dataset.action === 'connections') openConnDialog(job);
-  else openJobDialog(job);
+  const action = e.target.closest('button')?.dataset.action;
+  if (action === 'connections') openConnDialog(job);
+  else if (action === 'step-done') {
+    await Store.completeStep(job.id);
+    toast('✓ הצעד סומן כבוצע ונשמר בהיסטוריה');
+  } else openJobDialog(job);
 });
 
 // ---------- add / edit dialog ----------
@@ -162,6 +169,7 @@ function openJobDialog(job) {
   form.reset();
   $('#jobDialogTitle').textContent = job ? [job.company, job.role].filter(Boolean).join(' · ') : 'משרה חדשה';
   $('#deleteJob').hidden = !job;
+  $('#completeStep').hidden = !job;
   const values = job || { foundDate: today(), status: 'saved' };
   [...JOB_FIELDS, 'foundDate', 'status'].forEach(f => { form.elements[f].value = values[f] || ''; });
   editingHistory = job?.history?.length ? [...job.history] : null;
@@ -170,14 +178,18 @@ function openJobDialog(job) {
 }
 
 // The last entry is the current status, so it can't be removed
+// The last status entry is the current status, so it can't be removed; finished steps always can
 function renderHistory() {
   const history = editingHistory || [];
+  const current = history.findLastIndex(h => h.status);
   $('#jobHistory').innerHTML = !history.length ? '' :
-    '<label>היסטוריית סטטוסים</label><ol class="history">' + history.map((h, i) => {
-      const s = statusById(h.status);
-      const remove = i < history.length - 1
+    '<label>היסטוריה</label><ol class="history">' + history.map((h, i) => {
+      const remove = i !== current
         ? `<button type="button" class="remove-history" data-index="${i}" title="מחיקה מההיסטוריה">✕</button>` : '';
-      return `<li><span class="status-pill" style="--c:${s.color}">${s.label}</span> ${esc(formatDate(h.date))}${remove}</li>`;
+      const pill = h.status
+        ? `<span class="status-pill" style="--c:${statusById(h.status).color}">${statusById(h.status).label}</span>`
+        : `<span class="step-pill">✓ ${esc(h.step)}</span>`;
+      return `<li>${pill} ${esc(formatDate(h.date))}${remove}</li>`;
     }).join('') + '</ol>';
 }
 
@@ -186,8 +198,26 @@ $('#jobHistory').addEventListener('click', e => {
   const index = e.target.closest('[data-index]')?.dataset.index;
   if (index === undefined) return;
   editingHistory.splice(Number(index), 1);
-  // Two of the same status in a row would read as a duplicate, so keep only the first
-  editingHistory = editingHistory.filter((h, i, list) => i === 0 || h.status !== list[i - 1].status);
+  // The same status twice in a row would read as a duplicate, so keep only the first
+  let previous = null;
+  editingHistory = editingHistory.filter(h => {
+    if (!h.status) return true;
+    if (h.status === previous) return false;
+    previous = h.status;
+    return true;
+  });
+  renderHistory();
+});
+
+// Marking the next step done moves it into the history; saved with the form
+$('#completeStep').addEventListener('click', () => {
+  const form = $('#jobForm');
+  if (!form.elements.nextStep.value.trim() && !form.elements.nextDate.value) return;
+  const job = jobs.find(j => j.id === editingId);
+  editingHistory = [...(editingHistory || (job ? statusHistory(job) : [])),
+    completedStepEntry({ nextStep: form.elements.nextStep.value })];
+  form.elements.nextStep.value = '';
+  form.elements.nextDate.value = '';
   renderHistory();
 });
 

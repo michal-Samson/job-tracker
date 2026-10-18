@@ -224,3 +224,25 @@ td.role { color: #3f3d5a; }
 #insightsDialog .stat { background: #fafafe; box-shadow: none; border: 1px solid var(--border); display: block; }
 .insights-table { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; border-collapse: separate; border-spacing: 0; }
 .insights-table th { position: static; }
+
+.next-top { display: flex; align-items: center; gap: 6px; }
+.step-done {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: #047857;
+  background: #fff;
+  border-color: #a7f3d0;
+}
+.step-done:hover { background: #ecfdf5; border-color: #6ee7b7; }
+.input-with-button { display: flex; gap: 6px; }
+.input-with-button .step-done { flex: none; padding: 0 12px; }
+.step-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #047857;
+  background: #ecfdf5;
+}

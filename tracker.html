@@ -83,7 +83,13 @@
       </div>
       <div class="row">
         <div class="field"><label>תאריך הצעד הבא</label><input name="nextDate" type="date"></div>
-        <div class="field"><label>הצעד הבא</label><input name="nextStep" placeholder="ראיון / לחזור אליהם / לשלוח מבחן"></div>
+        <div class="field">
+          <label>הצעד הבא</label>
+          <div class="input-with-button">
+            <input name="nextStep" placeholder="ראיון / לחזור אליהם / לשלוח מבחן">
+            <button type="button" id="completeStep" class="step-done" title="סימון שבוצע">✓ בוצע</button>
+          </div>
+        </div>
       </div>
       <div class="field"><label>איש קשר (שם / טלפון / מייל)</label><input name="contact"></div>
       <div class="field"><label>הערות</label><textarea name="notes" rows="3"></textarea></div>

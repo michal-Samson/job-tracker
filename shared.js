@@ -59,6 +59,16 @@ const Store = {
     jobs[i] = { ...job, ...changes, history, lastUpdate: today() };
     await this.saveJobs(jobs);
   },
+  // Moves the job's next step into its history as done, and clears it
+  async completeStep(id) {
+    const job = (await this.getJobs()).find(j => j.id === id);
+    if (!job || (!job.nextStep && !job.nextDate)) return;
+    await this.updateJob(id, {
+      history: [...statusHistory(job), completedStepEntry(job)],
+      nextStep: '',
+      nextDate: '',
+    });
+  },
   async deleteJob(id) {
     const jobs = await this.getJobs();
     await this.saveJobs(jobs.filter(j => j.id !== id));
@@ -100,7 +110,8 @@ function wasSubmitted(job) {
 }
 
 // ---------- status history ----------
-// Jobs saved before history existed get a single entry for their current status
+// The history holds status changes ({ status, date }) and finished next steps ({ step, date }).
+// Jobs saved before history existed get a single entry for their current status.
 function statusHistory(job) {
   return job.history?.length ? job.history : [{ status: job.status, date: job.lastUpdate || job.foundDate || '' }];
 }
@@ -111,6 +122,9 @@ function historyWithStatus(job, status) {
   const earlier = history.findIndex(h => h.status === status);
   if (earlier >= 0 && !REPEATABLE_STATUSES.includes(status)) return history.slice(0, earlier + 1);
   return [...history, { status, date: today() }];
+}
+function completedStepEntry(fields) {
+  return { step: (fields.nextStep || '').trim() || 'הצעד הבא', date: today() };
 }
 function reached(job, statuses) {
   return statusHistory(job).some(h => statuses.includes(h.status));
